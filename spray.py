@@ -138,7 +138,6 @@ def main():
 
 	# Main user/pw loop and polling queue.
 	poll_list = []
-	ldap_index = -1
 	tick = time.time()
 	print("Searching for loot.")
 	for password in pw_list:
