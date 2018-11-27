@@ -12,12 +12,13 @@ loot = {}
 ldap_qcount = {}
 
 class userThread(threading.Thread):
-	def __init__(self, user, password='', domain='', ldap_server=''):
+	def __init__(self, user, password='', domain='', ldap_server_obj=None, ldap_server_name=''):
 		threading.Thread.__init__(self)
 		self.username = user
 		self.password = password
 		self.domain = domain
-		self.ldap_server = ldap_server
+		self.ldap_server = ldap_server_obj
+		self.ldap_server_name = ldap_server_name
 
 	def run(self):
 		while True:
@@ -112,6 +113,17 @@ def process_args():
 	parser.add_argument('-d','--domain', metavar="<domain>", type=str, help='Domain "example.com"')
 	return parser.parse_args()
 
+def check_poll_list(pl, ldap_qcount):
+	tmp_poll_list = []
+	for thread in pl:
+		if thread.is_alive():
+			tmp_poll_list.append(thread)
+		else:
+			ldap_qcount[thread.ldap_server_name] -= 1
+	pl = tmp_poll_list
+
+	return pl, ldap_qcount
+
 def main():
 
 	# Process args
@@ -131,7 +143,7 @@ def main():
 	# Setup LDAP connections/objects
 	ldap_servers = setup_ldap(ldap_qcount.keys())
 
-	max_queue_size = len(ldap_servers) * 450
+	max_queue_size = len(ldap_qcount.keys()) * 450
 	# Arbitrary 80% min queue value.
 	min_queue_size = int(max_queue_size * .80)
 	queue_pause_time = 1
@@ -143,16 +155,16 @@ def main():
 	for password in pw_list:
 		for user in users_list:
 			if len(poll_list) < max_queue_size:
-				the_tribute = min(ldap_qcount, key=ldap_qcount.get)
-				ldap_qcount[the_tribute] += 1
-				poll_list.append(userThread(user, password, domain, ldap_servers[the_tribute]))
+				ldap_tribute = min(ldap_qcount, key=ldap_qcount.get)
+				ldap_qcount[ldap_tribute] += 1
+				poll_list.append(userThread(user, password, domain, ldap_servers[ldap_tribute], ldap_tribute))
 				poll_list[-1].start()
-				poll_list = [x for x in poll_list if x.is_alive()]
+				poll_list, ldap_qcount = check_poll_list(poll_list, ldap_qcount)
 			else:
 				# Churn through poll_list queue until
 				# lower 'min_queue_size' threshold is met.
 				while len(poll_list) >= min_queue_size:
-					poll_list = [x for x in poll_list if x.is_alive()]
+					poll_list, ldap_qcount = check_poll_list(poll_list, ldap_qcount)
 					sleep(queue_pause_time)
 
 	tock2 = 0
@@ -160,7 +172,7 @@ def main():
 	print("Finished checking list. Waiting for queue to empty.")
 	while len(poll_list) > 0 and (tock2 - tick2) < 30:
 		print("%s items in the queue." % len(poll_list))
-		poll_list = [x for x in poll_list if x.is_alive()]
+		poll_list, ldap_qcount = check_poll_list(poll_list, ldap_qcount)
 		sleep(queue_pause_time)
 		tock2 = time.time()
 	tock = time.time()
