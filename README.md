@@ -1,4 +1,6 @@
-# This script is intended for both blue and red teams but the idea was born from blue.
+# LDAP Password Spraying
+This script is intended for both blue and red teams but the idea was born from blue.
+
 The script requires a list of users, passwords, ldap server(s) to authenticate against, and a domain name. 
 It then loops through each password and user trying one password for each user in the list before continuing to the next password.
 It performs a LDAP simple bind authentication in a thread with a default queue size of 450 and prioritizes the quickest responding servers first.
